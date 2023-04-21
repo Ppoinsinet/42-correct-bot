@@ -10,7 +10,7 @@ function sleep(sec) {
 class Scrapper {
 
     async init() {
-        this.browser = await puppeteer.launch({headless: true});
+        this.browser = await puppeteer.launch({headless: true, args: ["--no-sandbox"]});
         this.page = await this.browser.newPage();
     }
 
