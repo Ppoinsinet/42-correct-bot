@@ -6,7 +6,7 @@ require("dotenv").config();
 const Scrapper = require("./js/classes/Scrapper");
 const DAY_OF_WEEKS = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"];
 
-
+let projectName = "";
 let scrapper = null;
 
 client.on("ready", () => {
@@ -30,6 +30,8 @@ client.on("messageCreate", msg => {
           return msg.author.send("Missing name of project");
         scrapper = new Scrapper();
         scrapper.start(split[1], onCallback);
+        projectName = split[1];
+        msg.author.send("Starting scrapper on " + projectName);
         break;
 
       case "STOP":
@@ -63,6 +65,8 @@ function onCallback(arr) {
     txt += "DE : " + DAY_OF_WEEKS[from.getDay() - 1] + from.toLocaleString() + "\n A : " + DAY_OF_WEEKS[to.getDay() - 1] + to.toLocaleString() + "\n"; 
     if (index + 1 < arr.length)
       txt += "\n";
+    else
+      txt += `https://projects.intra.42.fr/projects/${projectName}/slots`;
     index++;
   }
 
