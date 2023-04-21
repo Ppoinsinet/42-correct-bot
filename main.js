@@ -3,35 +3,92 @@ const {Client, Intents} = require("discord.js")
 const client = new Client({intents: ["GuildMessages", "DirectMessages", "GuildMembers"]})
 require("dotenv").config();
 
+const Scrapper = require("./js/classes/Scrapper");
+const DAY_OF_WEEKS = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"];
+
+
+let scrapper = null;
+
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`)
 })
 
 client.on("messageCreate", msg => {
-  if (msg.author.bot)
+  if (msg.author.id !== process.env.MY_DISCORD_ID)
     return;
-  // On message
   console.log("Content : ", msg.content)
-  if (msg.content === "ping") {
-    msg.reply("pong");
+  // On message
+  const split = msg.content.split(" ");
+
+  if (split.length > 0) {
+
+    switch (split[0].toUpperCase()) {
+      case "START":
+        if (scrapper !== null)
+          return msg.author.send("Scrapper already running. Stop it if needed.");
+        if (split.length === 1)
+          return msg.author.send("Missing name of project");
+        scrapper = new Scrapper();
+        scrapper.start(split[1], onCallback);
+        break;
+
+      case "STOP":
+        if (scrapper === null)
+          return msg.author.send("No scrapper running.");
+        scrapper.stop = true;
+        scrapper = null;
+        return msg.author.send("Scrapper stopped");
+    
+      default:
+        break;
+    }
   }
 })
 
+let usersToNotice = null;
+
+function onCallback(arr) {
+  console.log("Callback : ", arr);
+  if (usersToNotice === null)
+    return ;
+    
+  let txt = "";
+  let index = 0;
+  for (let it of arr) {
+    if (it.title.toUpperCase() !== "AVAILABLE")
+      continue ;
+
+    const from = new Date(it.start);
+    const to = new Date(it.end);
+    txt += "DE : " + DAY_OF_WEEKS[from.getDay() - 1] + from.toLocaleString() + "\n A : " + DAY_OF_WEEKS[to.getDay() - 1] + to.toLocaleString() + "\n"; 
+    if (index + 1 < arr.length)
+      txt += "\n";
+    index++;
+  }
+
+  usersToNotice.forEach(v => {
+    if (v.user.bot === true)
+      return ;
+    v.user.send(txt);
+  });
+}
+
 async function main() {
-    await client.login(process.env.DISCORD_TOKEN);
+  
+  await client.login(process.env.DISCORD_TOKEN);
 
   const tmp = await client.guilds.fetch();
   const guild = tmp.find(v => v.name === "coucou");
+  const guildData = await guild.fetch();
 
-  const yo = await guild.fetch();
-  const chans = await yo.channels.fetch();
-  const correctChan = chans.find(v => v.name === "allo");
-
-  const users = await yo.members.fetch();  
-  users.forEach(v => {
-    console.log("test : ", v.user.username);
+  usersToNotice = await guildData.members.fetch();  
+  usersToNotice.forEach(v => {
+    if (v.user.bot)
+      return ;
+    if (v.user.id === process.env.MY_DISCORD_ID)
+      v.user.send("Starting service");
+    console.log("User to notice : ", v.user.username + " et " + v.user.id);
   });
-  const me = users.find(v => v.user.username === "Ppoinsinet").send("yoo");
 }
 
 main();
